@@ -4,6 +4,12 @@ output: html_document
 NC Campaign Contributions for 2012 Presidential Election by Steven Yeh
 ========================================================
 
+# Introduction
+
+In this project, I analyzed financial contributions of about 160,000 individuals
+in North Carolina during the 2012 Presidential Election. For each contributor, important information such as his/her city of residence, occupation, candidate recipient, and contribution amount was provided. Using several packages and functions within R, I attempted to explore and manipulate the data in an effort 
+to find relationships between the variables and visualize this process.
+
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.width = 12, echo=FALSE, warning=FALSE, 
                       message=FALSE, tidy=TRUE)
@@ -47,7 +53,7 @@ nc <- read.csv('nc1.csv', header = T, sep = ',', row.names = NULL)
 
 # Data Processing/Transformations
 
-``` {r echo=TRUE}
+``` {r echo=FALSE}
 
 # adding new column: party ------------------------------
 nc$party <- ifelse(
@@ -378,7 +384,8 @@ outliers. This is also reflected in Republicans and Democrats. Perhaps an indept
 ```{r echo=FALSE}
 
 # quantiles of contribution receipt amounts for Barack Obama
-quantile(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' & nc$contb_receipt_amt > 0)])
+quantile(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' &
+                                      nc$contb_receipt_amt > 0)])
 
 # 25th-percentile 
 obamalowerq <- quantile(nc$contb_receipt_amt[
@@ -546,7 +553,8 @@ nc.total_by_date <- arrange(nc.total_by_date,
                             contb_receipt_dt)
 
 # subset the data to dates up to Election Day (11-06-2012)
-nc.total_by_date <- subset(nc.total_by_date, contb_receipt_dt < as.Date('2012-11-07'))
+nc.total_by_date <- subset(nc.total_by_date, 
+                           contb_receipt_dt < as.Date('2012-11-07'))
 
 # create two line plots of total count and total amount (cont_total) over time
 count <- ggplot(data = nc.total_by_date, 
