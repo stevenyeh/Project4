@@ -4,6 +4,14 @@ output: html_document
 NC Campaign Contributions for 2012 Presidential Election by Steven Yeh
 ========================================================
 
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width = 12, echo=FALSE, warning=FALSE, 
+                      message=FALSE, tidy=TRUE)
+
+# no scientific notation in plots
+options(scipen = 10)
+```
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
 # Load all of the packages that you end up using
 # in your analysis in this code chunk.
@@ -29,6 +37,7 @@ library(memisc)
 library(modeest)
 library(ca)
 library(vcd)
+library(plotrix)
 ```
 
 ```{r echo=FALSE, Load_the_Data}
@@ -38,10 +47,18 @@ nc <- read.csv('nc1.csv', header = T, sep = ',', row.names = NULL)
 
 # Data Processing/Transformations
 
-``` {r echo=TRUE, tidy = TRUE}
+``` {r echo=TRUE}
 
 # adding new column: party ------------------------------
-nc$party <- ifelse(nc$cand_nm == 'Stein, Jill', 'Green',                ifelse(nc$cand_nm == 'Johnson, Gary                      Earl', 'Libertarian',                                       ifelse(nc$cand_nm == 'Obama,                             Barack', 'Democratic', 'Republican')))
+nc$party <- ifelse(
+  nc$cand_nm == 'Stein, Jill', 'Green',
+    ifelse(
+      nc$cand_nm == 'Johnson, Gary Earl', 'Libertarian',
+        ifelse(
+          nc$cand_nm == 'Obama, Barack', 'Democratic', 'Republican')
+    )
+  )
+
 
 nc$party <- as.factor(nc$party)
 
@@ -113,7 +130,8 @@ nc$contbr_city <- gsub('MT.*ULLA', 'MOUNT ULLA', nc$contbr_city)
 nc$contbr_city <- gsub('MT.*AIRY', 'MOUNT AIRY', nc$contbr_city)
 nc$contbr_city <- gsub('MT.*GILEAD', 'MOUNT GILEAD', nc$contbr_city)
 nc$contbr_city <- gsub('NEW.*BERN', 'NEW BERN', nc$contbr_city)
-nc$contbr_city <- gsub('NORTH TOPSAIL.*', 'NORTH TOPSAIL BEACH', nc$contbr_city)
+nc$contbr_city <- gsub('NORTH TOPSAIL.*', 'NORTH TOPSAIL BEACH', 
+                       nc$contbr_city)
 nc$contbr_city <- gsub('OCEAN ISL BCH', 'OCEAN ISLE BEACH', nc$contbr_city)
 nc$contbr_city <- gsub('PILOT.*', 'PILOT MOUNTAIN', nc$contbr_city)
 nc$contbr_city <- gsub('PITTSBORRO', 'PITTSBORO', nc$contbr_city)
@@ -127,130 +145,207 @@ nc$contbr_city <- gsub('SOUTH.*P.*NES', 'SOUTHERN PINES', nc$contbr_city)
 nc$contbr_city <- gsub('WAK.*FOREST', 'WAKE FOREST', nc$contbr_city)
 nc$contbr_city <- gsub('WIL.*MINGTON', 'WILMINGTON', nc$contbr_city)
 nc$contbr_city <- gsub('WIMGATE', 'WINGATE', nc$contbr_city)
+
+# setting the variable as a factor again
 nc$contbr_city <- as.factor(nc$contbr_city)
 ```
 
 # Univariate Plots Section
 
-```{r echo=FALSE, Univariate_Plots}
+```{r Univariate_Plots}
 
 # basic info --------------------------------------------
-dim(nc)
-names(nc)
 str(nc)
 levels(nc$cand_nm)
+```
+
+Names of the candidates involved in 2012 Presidential Election. Used as.factor() to convert several variables into factors in order to examine them fully.
+
+``` {r}
+
 # levels(nc$contbr_city)
+# summary statistics on all variables
 summary(subset(nc, contb_receipt_amt > 0))
 
-ggplot(data = subset(nc, contb_receipt_amt > 0), aes(contb_receipt_amt)) + 
-  geom_histogram(binwidth = 25) + 
-  coord_cartesian(xlim = c(0, 5000)) 
-
+# plot a histogram of receipt amounts, limit to under $500 since a majority of donations are under that
 ggplot(data = subset(nc, contb_receipt_amt > 0), aes(contb_receipt_amt)) + 
   geom_histogram(binwidth = 20) + 
   coord_cartesian(xlim = c(0, 500))
+```
 
-ggplot(data = subset(nc, contb_receipt_amt > 0 & 
-                       cand_nm == 'Obama, Barack'),
+There is only one contributor above $5000. Since the data is long-tailed, I adjusted the binwidth and x-axis in an attempt to gain a better understanding of the contribution distribution. By reducing the binwidth to address bias, the variance increases, but we can see that contributions are somewhat bimodal 
+around $50 and $100. The huge dropoff between values shows how people generally donate values that are regular numbers ($50, $100, $150, $200, $250). 
+
+``` {r}
+# separate plots by candidate
+ggplot(data = subset(nc, contb_receipt_amt > 0 & cand_nm == 'Obama, Barack'),
        aes(contb_receipt_amt)) +
-  geom_histogram(binwidth = 20) + ggtitle('Obama') +
+  geom_histogram(binwidth = 20) + 
+  ggtitle('Obama') +
   coord_cartesian(xlim = c(0, 500))
 
-ggplot(data = subset(nc, contb_receipt_amt > 0 & 
-                       cand_nm == 'Romney, Mitt'),
+ggplot(data = subset(nc, contb_receipt_amt > 0 & cand_nm == 'Romney, Mitt'),
        aes(contb_receipt_amt)) +
   geom_histogram(binwidth = 20) + 
   ggtitle('Romney') +
   coord_cartesian(xlim = c(0, 500))
 ```
 
-There is only one contributor above $5000. Since the data is long-tailed, I adjusted the binwidth and x-axis in an attempt to gain a better understanding of the contribution distribution. By reducing the binwidth to address bias, the variance increases, but we can see that contributions are somewhat bimodal around $50 and $100. The huge dropoff between values shows how people generally donate values that are regular numbers ($50, $100, $150, $200, $250). 
-
-For Obama, we can see that most contributions are well under $500 with a mode below $50. The histogram shows a mode under $50. For Romney, the mode is above $100 with a significant amount of individuals donating around $250. 
+For Obama, we can see that most contributions are well under $500 with a mode 
+below $50. The histogram shows a mode under $50. For Romney, the mode is above 
+$100 with a significant amount of individuals donating around $250. 
 
 ```{r echo=FALSE}
+
+# scale_x_date is how you limit the x-axis instead of coord_cartesian
 ggplot(data = subset(nc, contb_receipt_amt > 0), aes( contb_receipt_dt)) + 
   geom_histogram() + 
   scale_x_date(limits = c(as.Date('2011-07-25'), '2013-01-01'))
 
-count(subset(nc, contb_receipt_amt > 0), contb_receipt_dt) %>% arrange(desc(n))
 ```
 
-The data is unimodal around October 2012, which was the peak of election season right before Election Day in November. Since the receipt date officially reflects the date the contribution is relinquished from the contributor, the peak in October makes sense; campaigns would certainly utilize the most money around that time of year for the final push.
+The data is unimodal around October 2012, which was the peak of election season right before Election Day in November. Since the receipt date officially 
+reflects the date the contribution is relinquished from the contributor, the 
+peak in October makes sense; campaigns would certainly utilize the most money around that time of year for the final push.
 
 ``` {r echo=FALSE}
 summary(nc$cand_nm)
 
+# exclude negative receipts since those indicate refunds / bounced checks
 count(nc, contb_receipt_amt <= 0)
+```
 
+There exist a good amount of contributors with receipt amounts of either 0 or negative values (1236). These exist to show contribution checks that were 
+bounced or returned. For the sake of calculations, these rows will be excluded. 
+Most campaign contributors in North Carolina gave to Barack Obama (106,847) with Mitt Romney at a distant second (40,665). 
+
+``` {r}
+# use which to specify conditions
+# total contribution amount by party
 sum(nc$contb_receipt_amt[which(nc$party == 'Democratic' &                              nc$contb_receipt_amt > 0)])
 
 sum(nc$contb_receipt_amt[which(nc$party == 'Republican' &                             nc$contb_receipt_amt > 0)])
-
-summary(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' & nc$contb_receipt_amt > 0)])
-
-summary(nc$contb_receipt_amt[which(nc$party == 'Republican' & nc$contb_receipt_amt > 0)])
 ```
 
-There exist a good amount of contributors with receipt amounts of either 0 or negative values (1236). These exist to show contribution checks that were bounced or returned. For the sake of calculations, these rows will be excluded. 
-Most campaign contributors in North Carolina gave to Barack Obama (106,847) with Mitt Romney at a distant second (40,665). However, the total amount donated to the Democratic ($10,607,642) is significantly less than that of Republicans ($16,048,404). Doing some simple mathematics, Democrats donated about $99.28 each on average while Republicans averaged about $329.84 per contributor. However, median contribution might be a better measure of central tendency because of the sheer amount of outliers. That being said, Democrats had a median contribution of $40 while Republicans had a median contribution of $100. 
+However, the total amount donated to the Democratic ($10,607,642) is significantly less than that of Republicans ($16,048,404). 
+
+``` {r}
+# total contribution amount by candidate
+summary(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' &
+                                     nc$contb_receipt_amt > 0)])
+
+summary(nc$contb_receipt_amt[which(nc$cand_nm == 'Romney, Mitt' & 
+                                     nc$contb_receipt_amt > 0)])
+```
+
+Doing some simple mathematics, Democrats donated about $99.28 each on average while Republicans averaged about $329.84 per contributor. 
+Median contribution might be a better measure of central tendency 
+because of the sheer amount of outliers. That being said, Democrats had a median contribution of $40 while Republicans had a median contribution of $100. 
 
 ``` {r echo=FALSE}
 summary(nc$contbr_zip)
-triangle <- sum(nc$contb_receipt_amt[which((nc$contbr_city == 'CARY' | nc$contbr_city == 'DURHAM' | nc$contbr_city == 'RALEIGH' | nc$contbr_city == 'CHAPEL HILL') & nc$contb_receipt_amt > 0)])
 
-triangle / sum(nc$contb_receipt_amt[which(
-  nc$contb_receipt_amt > 0)])
+# add up contributors in Triangle area 
+triangle <- sum(nc$contb_receipt_amt[which((nc$contbr_city == 'CARY' |
+                                            nc$contbr_city == 'DURHAM' |
+                                            nc$contbr_city == 'RALEIGH' |
+                                            nc$contbr_city == 'CHAPEL HILL') &
+                                            nc$contb_receipt_amt > 0)])
 
-charlotte <- sum(nc$contb_receipt_amt[which(  nc$contbr_city == 'CHARLOTTE' & nc$contb_receipt_amt > 0)])
+# percentage of Triangle contributors as a whole
+triangle / sum(nc$contb_receipt_amt[which(nc$contb_receipt_amt > 0)])
 
-charlotte / sum(nc$contb_receipt_amt[which( nc$contb_receipt_amt > 0)])
+# add up contributors in Charlotte city
+charlotte <- sum(nc$contb_receipt_amt[which(nc$contbr_city == 'CHARLOTTE' &
+                                              nc$contb_receipt_amt > 0)])
 
-charlottemet <- sum(nc$contb_receipt_amt[which((         nc$contbr_city == 'CHARLOTTE' |                         nc$contbr_city == 'CONCORD' |                            nc$contbr_city == 'GASTONIA' |                           nc$contbr_city == 'ROCK HILL' |                          nc$contbr_city == 'HUNTERSVILLE' |                       nc$contbr_city == 'KANNAPOLIS' |                         nc$contbr_city == 'HICKORY' |                           nc$contbr_city == 'INDIAN TRAIL' |                       nc$contbr_city == 'MOORESVILLE' |                        nc$contbr_city == 'MONROE') &                            nc$contb_receipt_amt > 0)])
+# percentage of Charlotte contributors as a whole
+charlotte / sum(nc$contb_receipt_amt[which(nc$contb_receipt_amt > 0)])
+
+# add up contributors in top 10 cities in Charlotte Metropolitan Area
+charlottemet <- sum(nc$contb_receipt_amt[which((nc$contbr_city == 'CHARLOTTE' |
+                                              nc$contbr_city == 'CONCORD' |
+                                              nc$contbr_city == 'GASTONIA' |
+                                              nc$contbr_city == 'ROCK HILL' |
+                                              nc$contbr_city == 'HUNTERSVILLE' |
+                                              nc$contbr_city == 'KANNAPOLIS' | 
+                                              nc$contbr_city == 'HICKORY' | 
+                                              nc$contbr_city == 'INDIAN TRAIL' |
+                                              nc$contbr_city == 'MOORESVILLE' | 
+                                              nc$contbr_city == 'MONROE') &
+                                              nc$contb_receipt_amt > 0)])
 
 charlottemet / sum(nc$contb_receipt_amt[which(nc$contb_receipt_amt > 0)])
 ```
 
-The top five zipcodes for contributors are all from the Triangle area, specifically Durham and Chapel Hill. The total contribution from the Triangle area (Durham, Chapel Hill, Raleigh, and Cary) amounts to $7,239,282.72, which is 27.15% of the total contribution by the state. Charlotte, the most populous city in NC, contributed $3,978,937.01, or about 14.92% of the total contribution. 
-Even if the 10 largest cities comprising of the Charlotte Metropolitan area are included, the contribution ($4,643,388.72, 18.32%) still pales in comparison to the Triangle. The concentration of the state's top universities (NC State, UNC Chapel Hill, and Duke) in the Triangle area might contribute to the difference.
+The top five zipcodes for contributors are all from the Triangle area, 
+specifically Durham and Chapel Hill. The total contribution from the Triangle 
+area (Durham, Chapel Hill, Raleigh, and Cary) amounts to $7,239,282.72, which is 27.15% of the total contribution by the state. Charlotte, the most populous city
+in NC, contributed $3,978,937.01, or about 14.92% of the total contribution. 
+Even if the 10 largest cities comprising of the Charlotte Metropolitan area are included, the contribution ($4,643,388.72, 18.32%) still pales in comparison to 
+the Triangle. The concentration of the state's top universities (NC State, UNC Chapel Hill, and Duke) in the Triangle area might contribute to the difference.
 
 ```{r echo=FALSE}
-ggplot(data = subset(nc, cand_nm == 'Obama, Barack' | cand_nm == 'Romney, Mitt'), aes(cand_nm)) + 
+
+# frequency of contributors for the two main candidates 
+ggplot(data = subset(nc, cand_nm == 'Obama, Barack' | 
+                       cand_nm == 'Romney, Mitt'), 
+       aes(cand_nm)) + 
   geom_bar()
 
-ggplot(data = subset(nc, party == 'Democratic' | party == 'Republican'), aes(party)) + 
+# frequency of contributors for both major parties
+ggplot(data = subset(nc, party == 'Democratic' | party == 'Republican'),
+       aes(party)) + 
   geom_bar()
 ```
 
-These are just a few bar graphs to show the distribution of candidates and parties from contributions. Again, the Democratic party and Obama garnered the most amount of contributions.
+These are just a few bar graphs to show the distribution of candidates and 
+parties from contributions. Again, the Democratic party and Obama garnered the 
+most amount of contributions.
 
 
 # Univariate Analysis
 
 ### What is the structure of your dataset?
-Through the FEC website, I chose to examine the state of North Carolina and its financial contributions during the 2012 presidential campaign (Republicans eventually took the state with 50.39% over Democrats' 48.35%). There were 156,828 contributors with 19 (18 plus one I created) features. None of the variables are ordered factor variables; they are either categorical or quantitative.  
+Through the FEC website, I chose to examine the state of North Carolina and its financial contributions during the 2012 presidential campaign (Republicans eventually took the state with 50.39% over Democrats' 48.35%). There were 
+156,828 contributors with 20 (18 plus two I created) features. None of the variables are ordered factor variables; they are either categorical or quantitative.  
 
-The plurality of contributors are retired, self-employed, or unemployed. Campaign contributions are capped at $2,700 per election to a Federal candidate. However, individuals can give up to $5,000 to Political Action Committees (PACs) or up to $10,000 to the State or local party committee.
+The plurality of contributors are retired, self-employed, or unemployed. 
+Campaign contributions are capped at $2,700 per election to a Federal candidate. However, individuals can give up to $5,000 to Political Action Committees (PACs) 
+or up to $10,000 to the State or local party committee.
 
 ### What is/are the main feature(s) of interest in your dataset?
-The main features in this data set are contribution amount and candidate/party affiliation. I would like to examine which variables determine the amount of contribution towards a specific candidate or political party. This is probably some combination of geographic region (zipcode, city) and the candidate or party him/herself. 
+The main features in this data set are contribution amount and candidate/party affiliation. I would like to examine which variables determine the amount of contribution towards a specific candidate or political party. This is probably 
+some combination of geographic region (zipcode, city) and the candidate or party him/herself. 
 
 ### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
-It would be interesting to look at the occupations and employers of contributors who are in the workforce. Perhaps this could also provide some insight as to what type of companies support each candidate. Even though Republican donors gave fewer contributions, the amount contributed was far greater than their Democratic counterparts. Subsetting the data by party will allow for more exploration into this discrepancy.
+It would be interesting to look at the occupations and employers of contributors who are in the workforce. Perhaps this could also provide some insight as to 
+what type of companies support each candidate. Even though Republican donors 
+gave fewer contributions, the amount contributed was far greater than their Democratic counterparts. Subsetting the data by party will allow for more exploration into this discrepancy.
 
 ### Did you create any new variables from existing variables in the dataset?
-A new column called party was created to represent each candidate's political party. A majority were Republican with the exceptions of Barack Obama (D), Gary Johnson (Libertarian), and Jill Stein (Green). Even though there were 10 Republican candidates, Obama and the Democratic party received the most number of contributions (107631). Republicans outside of Mitt Romney receieved a total of less than 8,000 contributions. The Libertarian (273) and Green (30) parties receieved comparably miniscule amounts.
-Another new column called threedigit_zip was created since the first three digits of a zipcode specify a city or divides a larger city into several smaller parts. Sometimes, five-digit zipcodes are too specific, as some cities can have numerous five-digit zipcodes with identical first three digits.
+A new column called party was created to represent each candidate's political party. A majority were Republican with the exceptions of Barack Obama (D), Gary Johnson (Libertarian), and Jill Stein (Green). Even though there were 10 
+Republican candidates, Obama and the Democratic party received the most number 
+of contributions (107631). Republicans outside of Mitt Romney receieved a total 
+of less than 8,000 contributions. The Libertarian (273) and Green (30) parties receieved comparably miniscule amounts.
+Another new column called threedigit_zip was created since the first three 
+digits of a zipcode specify a city or divides a larger city into several smaller parts. Sometimes, five-digit zipcodes are too specific, as some cities can have numerous five-digit zipcodes with identical first three digits.
 
 ### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
-Barack Obama dominated campaign contributions, but Mitt Romney won the state with 51% of the popular vote, showing a discrepancy between funding and candidate popularity.
+
+Barack Obama dominated campaign contributions, but Mitt Romney won the state 
+with 51% of the popular vote, showing a discrepancy between funding and 
+candidate popularity.
 There also exist some negative campaign contributions up to -$5,000, which are nonsensical. 
-Zipcodes were often in the extended format, so I amended these to only show 5 digits. In addition, many rows had incorrectly spelled city names (Asheville, Ashevile, Ashville), so I corrected these fields with regex. This would give me a more accurate look into which areas of NC generally supported which candidate.
-The dates were in a nonstandard format, so I converted them into YYYY-MM-DD format using as.Dates in order to fully utilize this column.
+Zipcodes were often in the extended format, so I amended these to only show 5 digits. In addition, many rows had incorrectly spelled city names (Asheville, Ashevile, Ashville), so I corrected these fields with regex. This would give me 
+a more accurate look into which areas of NC generally supported which candidate.
+The dates were in a nonstandard format, so I converted them into YYYY-MM-DD 
+format using as.Dates in order to fully utilize this column.
 
 # Bivariate Plots Section
 ```{r echo=FALSE, Bivariate_Plots, fig.width = 9}
 
+# boxplot of receipt amounts by candidate, exclude minor candidates w/ minimal funding
 ggplot(data = subset(nc, contb_receipt_amt > 0 & 
                        (cand_nm == 'Bachmann, Michele' |
                         cand_nm == 'Cain, Herman' |
@@ -267,7 +362,9 @@ ggplot(data = subset(nc, contb_receipt_amt > 0 &
   stat_summary(fun.y = mean, geom = 'point', shape = 4) +
   coord_cartesian(ylim = c(0, 2000))
 
-ggplot(data = subset(nc, contb_receipt_amt > 0 & (party == 'Democratic' | party == 'Republican')), 
+# boxplot of receipt amounts for both major parties
+ggplot(data = subset(nc, contb_receipt_amt > 0 & (party == 'Democratic' | 
+                                                    party == 'Republican')), 
        aes(x = party, 
            y = contb_receipt_amt)) +
   geom_boxplot(outlier.colour = 'green') +
@@ -275,23 +372,39 @@ ggplot(data = subset(nc, contb_receipt_amt > 0 & (party == 'Democratic' | party 
   coord_cartesian(ylim = c(0, 1000))
 ```
 
-The top two candidates, Obama and Romney have an extraordinary amount of outliers.
+The top two candidates, Obama and Romney have an extraordinary amount of 
+outliers. This is also reflected in Republicans and Democrats. Perhaps an indepth exploration of quantiles will show the exact amount of outliers.
 
 ```{r echo=FALSE}
 
+# quantiles of contribution receipt amounts for Barack Obama
 quantile(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' & nc$contb_receipt_amt > 0)])
 
-obamalowerq <- quantile(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' & nc$contb_receipt_amt > 0)], 0.25)
+# 25th-percentile 
+obamalowerq <- quantile(nc$contb_receipt_amt[
+  which(nc$cand_nm == 'Obama, Barack' & 
+          nc$contb_receipt_amt > 0)], 0.25)
 
-obamahigherq <- quantile(nc$contb_receipt_amt[which(nc$cand_nm == 'Obama, Barack' & nc$contb_receipt_amt > 0)], 0.75)
+# 75th-percentile
+obamahigherq <- quantile(nc$contb_receipt_amt[
+  which(nc$cand_nm == 'Obama, Barack' & nc$contb_receipt_amt > 0)], 0.75)
 
+# Interquartile Range 
 obamaiqr = obamahigherq - obamalowerq
 
+# amount of outliers for Obama's contribution receipt amounts
 count(subset(nc, 
              cand_nm == 'Obama, Barack'),
       (contb_receipt_amt > 
          (obamaiqr * 1.5) + obamahigherq))
+```
 
+Obama's contributors averaged around $99.28 with an Interquartile Range of $81 
+(100 - 19). There are 10,935 outliers out of the total 106,847 Obama 
+contributors, or who donated greater than $221.50 (1.5 * 81 + 100). 
+
+``` {r}
+# quantiles of contribution receipt amounts for Mitt Romney
 quantile(nc$contb_receipt_amt[which(
   nc$cand_nm == 'Romney, Mitt' & 
     nc$contb_receipt_amt > 0)])
@@ -308,40 +421,30 @@ romneyhigherq <- quantile(nc$contb_receipt_amt[which(
 
 romneyiqr = romneyhigherq - romneylowerq
 
+# amount of outliers for Romney's contribution receipt amounts
 count(subset(nc, 
              cand_nm == 'Romney, Mitt'),
       (contb_receipt_amt > 
          (obamaiqr * 1.5) + obamahigherq))
+```
 
+Romney's contributors averaged $100 with an IQR of $200 (250 - 50). There are 15,669 outliers out of the total 40,665 Romney contributors, or who donated 
+greater than $550 (1.5 * 200 + 250). 
+
+``` {r}
+# quantiles for Rick Perry's contribution receipt amounts
 quantile(nc$contb_receipt_amt[which(
   nc$cand_nm == 'Perry, Rick' & 
     nc$contb_receipt_amt > 0)])
 ```
 
-Obama's contributors averaged around $99.28 with an Interquartile Range of $81 (100 - 19). There are 10,935 outliers out of the total 106,847 Obama contributors, or who donated greater than $221.50 (1.5 * 81 + 100). 
-
-Romney's contributors averaged $100 with an IQR of $200 (250 - 50). There are 15,669 outliers out of the total 40,665 Romney contributors, or who donated greater than $550 (1.5 * 200 + 250). 
-
 Rick Perry contributors had the highest mean contribution of $400 with a 75% quartile of $1,750. It seems that Perry supporters donated in larger chunks than other candidates. 
 
-```{r echo=FALSE}
-ggplot(data = subset(nc, contb_receipt_amt > 0), 
-       aes(x = contb_receipt_dt, 
-           y = contb_receipt_amt)) + 
-  geom_point() + 
-  scale_x_date(limits = c(as.Date('2011-07-25'),
-                          '2013-01-01'))
+```{r fig.width = 10}
 
-ggplot(data = subset(nc, contb_receipt_amt > 0), 
-       aes(x = contb_receipt_dt, 
-           y = contb_receipt_amt)) + 
-  geom_line() + 
-  scale_x_date(limits = c(as.Date('2011-07-25'),
-                          '2013-01-01'))
-
-ggplot(data = subset(nc, contb_receipt_amt > 0 & 
-                       (cand_nm == 'Obama, Barack' | 
-                          cand_nm == 'Romney, Mitt')), 
+# histogram of contribution receipt amounts by date for Obama and Romney
+ggplot(data = subset(nc, contb_receipt_amt > 0 & (cand_nm == 'Obama, Barack' |
+                                                    cand_nm == 'Romney, Mitt')), 
        aes(contb_receipt_dt)) + 
   geom_histogram() + 
   scale_x_date(limits = c(as.Date('2011-07-25'),
@@ -349,9 +452,14 @@ ggplot(data = subset(nc, contb_receipt_amt > 0 &
   facet_wrap( ~ cand_nm)
 ```
 
-As we can see, the date does not predict monetary amount of contribution.  However, faceting by candidate does show that the number of contributions increased for the two relevant candidates, Obama and Romney, up to Election Day (November 6, 2012). For other Republican candidates, the level of contribution rose during their campaigns and fell after they were not selected through the Primary or decided to drop out of the race. Libertarian and Green Party candidates Johnson and Stein did not have nearly the level of financial support that the two main parties possessed.
+Faceting by candidate does show that the number of contributions 
+increased for the two relevant candidates, Obama and Romney, up to Election Day (November 6, 2012). For other Republican candidates, the level of contribution
+rose during their campaigns and fell after they were not selected through the Primary or decided to drop out of the race. Libertarian and Green Party 
+candidates Johnson and Stein did not have nearly the level of financial support that the two main parties possessed.
 
 ``` {r echo=FALSE}
+
+# histogram of contribution amounts (count) for Obama and Romney
 ggplot(data = subset(nc, contb_receipt_amt > 0 & 
                        (cand_nm == 'Obama, Barack' | 
                           cand_nm == 'Romney, Mitt')),
@@ -361,200 +469,410 @@ ggplot(data = subset(nc, contb_receipt_amt > 0 &
   coord_cartesian(xlim = c(0, 500))
 ```
 
-Faceting by candidate reinforces the fact that the median donation for Obama is less than that of Romney.
+Faceting by candidate reinforces the fact that the median donation for Obama is less than that of Romney. Obama has many more donations under $100. 
 
 ``` {r echo=FALSE}
-ggplot(data = subset(nc, contb_receipt_amt > 0 & (party == 'Democratic' | party == 'Republican')),
-       aes(party, fill = cand_nm)) + 
-  geom_bar()
 
+# group nc by candidate names
 candidate <- group_by(subset(nc, contb_receipt_amt > 0),
                       cand_nm)
 
+# create new dataframe of candidate, number of contributions, and total contribution amount
 nc.total_by_cand <- summarise(candidate,
                   cont_count = n(),
-                  cont_total = sum(contb_receipt_amt[which(contb_receipt_amt > 0)]))
+                  cont_total = sum(contb_receipt_amt[which(
+                    contb_receipt_amt > 0)]))
 
+# arrange dataframe by candidate name
 nc.total_by_cand <- arrange(nc.total_by_cand, cand_nm)
 
-head(nc.total_by_cand, 13)
+# create two bar graphs for total count and total amount for each candidate
+count <- ggplot(subset(nc.total_by_cand, 
+                       cand_nm == 'Obama, Barack' | 
+                         cand_nm == 'Romney, Mitt'), 
+                aes(cand_nm, cont_count)) + 
+  geom_bar(stat = 'identity')
+
+total <- ggplot(subset(nc.total_by_cand, 
+                       cand_nm == 'Obama, Barack' | 
+                         cand_nm == 'Romney, Mitt'), 
+                aes(cand_nm, cont_total)) + 
+  geom_bar(stat = 'identity')
+
+# gridExtra package, place both grids side by side
+grid.arrange(count, total, ncol = 2)
+
+# same done with minor candidates
+count <- ggplot(subset(nc.total_by_cand, 
+                       (cand_nm == 'Bachmann, Michele' |
+                        cand_nm == 'Cain, Herman' |
+                        cand_nm == 'Gingrich, Newt' |
+                        cand_nm == 'Paul, Ron' | 
+                        cand_nm == 'Perry, Rick' |
+                        cand_nm == 'Johnson, Gary Earl')),
+                aes(cand_nm, cont_count)) + 
+  geom_bar(stat = 'identity')
+
+total <- ggplot(subset(nc.total_by_cand, 
+                       (cand_nm == 'Bachmann, Michele' |
+                        cand_nm == 'Cain, Herman' |
+                        cand_nm == 'Gingrich, Newt' |
+                        cand_nm == 'Paul, Ron' | 
+                        cand_nm == 'Perry, Rick' |
+                        cand_nm == 'Johnson, Gary Earl')),
+                aes(cand_nm, cont_total)) + 
+  geom_bar(stat = 'identity')
+
+grid.arrange(count, total, ncol = 2)
 ```
 
 Obama was campaigning for reelection and was therefore the sole representative for the Democratic Party. Romney eventually edged out the other Republican nominees for the candidacy race, which can be reflected in the chart: his contribution count and total dwarf the rest of the Republicans' numbers.
 
+For minor tier candidates, distribution of counts and totals were similar with the exception of Rick Perry, who achieved a significantly higher average contribution amount than the other candidates of the same tier.
+
 ``` {r echo=FALSE}
+
+# group nc by receipt dates
 date <- group_by(subset(nc, contb_receipt_amt > 0),
                  contb_receipt_dt)
 
+# create dataframe of dates, number of contributions, and total contribution amount
 nc.total_by_date <- summarise(date,
     cont_count = n(),
     cont_total = sum(contb_receipt_amt[which(contb_receipt_amt > 0)]))
 
+# arrange by date (ascending)
 nc.total_by_date <- arrange(nc.total_by_date,
                             contb_receipt_dt)
 
-head(top_n(nc.total_by_date, 20))
+# subset the data to dates up to Election Day (11-06-2012)
+nc.total_by_date <- subset(nc.total_by_date, contb_receipt_dt < as.Date('2012-11-07'))
+
+# create two line plots of total count and total amount (cont_total) over time
+count <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_count)) + 
+  geom_line() +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06'))
+
+total <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_total)) + 
+  geom_line() +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06'))
+
+# arrange these plots side by side
+grid.arrange(count, total, ncol = 2)
 ```
 
-Created a new table that gives the total contribution each day for all candidates. However, the time series has uneven spacing, and it would not make sense to use linear interpolation to transform this data. One would have to somehow build a continuous-time stochastic model or try an advanced algorithm specific to irregularly spaced time-series.
+Created line plots of both contribution counts and total amounts. Both plots suggest an exponential relationship leading up to a peak around Election Day. 
 
-``` {r echo=FALSE}
+``` {r fig.width = 10}
+
+# fitting exponential line to both models by taking log10 of y-axis
+count_expo <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_count)) + 
+  geom_point() + 
+  scale_y_log10() + 
+  stat_smooth(method = 'lm',
+              aes(color = 'Exponential')) +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06'))
+
+total_expo <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_total)) + 
+  geom_point() + 
+  scale_y_log10() + 
+  stat_smooth(method = 'lm',
+              aes(color = 'Exponential')) +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06'))
+
+# arrange side to side
+grid.arrange(count_expo, total_expo, ncol = 2)
+```
+
+By taking the log 10 of count and fitting a straight line to this edited chart, we can see that an exponential model fits rather well to the data. 
+
+
+``` {r}
+
+# group nc by zipcodes
 zip <- group_by(subset(nc, contb_receipt_amt > 0),
                 contbr_zip)
+
+# create dataframe of zipcode, number of contributions, total contribution amount
 nc.total_by_zip <- summarise(zip,
     cont_count = n(),
     cont_total = sum(contb_receipt_amt[which(contb_receipt_amt > 0)])) 
 
+# arrange dataframe by descending total contribution amount
 nc.total_by_zip <- arrange(nc.total_by_zip,
                            desc(cont_total))
 
-head(nc.total_by_zip, 20)
+# new column showing average contribution for each zipcode
+nc.total_by_zip$mean <- nc.total_by_zip$cont_total / 
+  nc.total_by_zip$cont_count
 
+# plot top zipcodes by count
+count <- ggplot(subset(nc.total_by_zip, 
+                       cont_count > 1700), 
+                aes(contbr_zip, cont_count)) + 
+  geom_bar(stat = 'identity')
+
+# plot top zipcodes by total
+total <- ggplot(subset(nc.total_by_zip, 
+                       cont_total > 400000), 
+                aes(contbr_zip, cont_total)) + 
+  geom_bar(stat = 'identity')
+
+# plot top zipcodes by mean contribution
+mean <- ggplot(subset(nc.total_by_zip, 
+                       cont_total > 400000), 
+                aes(contbr_zip, mean)) + 
+  geom_bar(stat = 'identity')
+
+# compare top zipcodes by count and by total
+grid.arrange(count, total, ncol = 2)
+
+# look at top zipcodes by total and their respective means
+grid.arrange(total, mean, ncol = 2)
+```
+
+The top zipcodes by count are all located in the Triangle area (27514, 27516, 27517, 27705). However, the top zipcodes by total contribution amount are located in Charlotte (28207, 28211). Interestingly enough, 28207 is not in the top 10 of count even though the total amount donated was the greatest. Looking at the bar plot for mean, we can see that 28207 has an incredibly high average contribution amount (> 600), which indicates a lower count combined with a higher contribution total. 
+
+``` {r}
+# group nc by city
 city <- group_by(subset(nc, contb_receipt_amt > 0),
                  contbr_city)
 
+# create dataframe of city, number of contributions, total contribution amount
 nc.total_by_city <- summarise(city,
     cont_count = n(),
     cont_total = sum(contb_receipt_amt[which(contb_receipt_amt > 0)]))
 
+# arrange dataframe by descending total contribution amount
 nc.total_by_city <- arrange(nc.total_by_city,
                             desc(cont_total))
 
-head(nc.total_by_city, 20)
+# new column for mean contribution per city
+nc.total_by_city$mean <- nc.total_by_city$cont_total / 
+  nc.total_by_city$cont_count
 
-ggplot(data = subset(nc, contbr_city == 'CHARLOTTE' & (party == 'Democratic' | party == 'Republican')),
-       aes(party, fill = cand_nm)) + 
-  geom_bar()
+# plot top cities by count, total, and means
+count <- ggplot(subset(nc.total_by_city, 
+                       cont_count > 5000), 
+                aes(contbr_city, cont_count)) + 
+  geom_bar(stat = 'identity')
+
+total <- ggplot(subset(nc.total_by_city, 
+                       cont_total > 1000000), 
+                aes(contbr_city, cont_total)) + 
+  geom_bar(stat = 'identity')
+
+mean <- ggplot(subset(nc.total_by_city, 
+                       cont_total > 1000000), 
+                aes(contbr_city, mean)) + 
+  geom_bar(stat = 'identity')
+
+# compare top city by count, total, and mean
+grid.arrange(count, total, mean, ncol = 2)
 ```
 
-The zipcodes and cities that contributed the most total contribution were located in Charlotte and the Triangle (Chapel Hill, Durham, and Raleigh). This is to be expected since these two are the largest and most populous areas of North Carolina.
+The top five cities by both contribution count and total are identical, with similar distributions across both bar charts. Durham is the only exception, with a significantly higher count but a lower total than Chapel Hill. Looking at top five cities by mean contribution, Durham has the lowest mean, which contributes to its relatively lower total.
 
-``` {r echo=FALSE}
+``` {r}
+# same done for of most populous city, Charlotte
+charlotte_count <- ggplot(data = subset(nc, contbr_city == 'CHARLOTTE' & 
+                       (cand_nm == 'Romney, Mitt' | 
+                          cand_nm == 'Obama, Barack')),
+  aes(cand_nm)) + geom_bar()
+
+charlotte_total <- ggplot(data = subset(nc, contbr_city == 'CHARLOTTE' & 
+                       (cand_nm == 'Romney, Mitt' | 
+                          cand_nm == 'Obama, Barack')),
+  aes(cand_nm, contb_receipt_amt)) + 
+  geom_bar(stat = 'identity')
+
+grid.arrange(charlotte_count, charlotte_total, ncol = 2)
+```
+
+The distribution of contributions in Charlotte is very 
+similar to that of the entire state, with Obama significantly leading count and Romney significantly leading total.
+
+``` {r fig.width = 10 }
+
+# group nc by occupation
 job <- group_by(subset(nc, contb_receipt_amt > 0),
                 contbr_occupation)
 
+# new dataframe 
 nc.total_by_job <- summarise(job,
     cont_count = n(),
     cont_total = sum(contb_receipt_amt[which(contb_receipt_amt > 0)])) 
 
-nc.total_by_job$mean <- nc.total_by_job$cont_total / nc.total_by_job$cont_count
+# create new column of mean contribution amount for each job 
+nc.total_by_job$mean <- nc.total_by_job$cont_total / 
+  nc.total_by_job$cont_count
 
+# arrange by descending total contribution amount
 nc.total_by_job <- arrange(nc.total_by_job,
                            desc(cont_total))
 
-head(nc.total_by_job, 20)
-```
-
-It is interesting to note that a significant chunk of contributors are retired. Ignoring the significant portion of contributors who declined to state their profession, the next top contributors are homemakers. As homemakers most likely do not generate very much income, it is feasible to attribute this high contribution total to those who match their contribution with that of their spouse (this is an available and widely used option in campaign donations). After homemakers are contributors that come from highly esteemed careers such as physicians, attorneys, professors, executives, and presidents. 
-
-``` {r echo=FALSE}
-employer <- group_by(subset(nc, contb_receipt_amt > 0),
-                     contbr_employer)
-
-nc.total_by_employer <- summarise(employer,
-    cont_count = n(),
-    cont_total = sum(contb_receipt_amt[which(contb_receipt_amt > 0)]))
-
-nc.total_by_employer <- arrange(nc.total_by_employer,
-                                desc(cont_total))
-
-head(nc.total_by_employer, 20)
-```
-
-Retired contributors are still the top contributors, but self-employed contributors are in second. The term itself is vague, but individuals who comprise this group most likely comprised of small business owners(grocers, restaurants, etc.). 
-
-```{r echo=FALSE}
-ggplot(data = subset(nc, (contbr_employer == 'SELF-EMPLOYED' | contbr_employer == 'SELF') & (party == 'Democratic' | party == 'Republican')), 
-       aes(party, fill = cand_nm)) + 
-  geom_bar() + 
-  ggtitle('Self-Employed')
-
-ggplot(data = subset(nc, contbr_occupation == 'RETIRED' & (party == 'Democratic' | party == 'Republican')),
-       aes(party, fill = cand_nm)) + 
-  geom_bar() + 
-  ggtitle('Retired')
-
-ggplot(data = subset(nc, contbr_occupation == 'HOMEMAKER' & (party == 'Democratic' | party == 'Republican')), 
-       aes(party, fill = cand_nm)) + 
-  geom_bar() + 
-  ggtitle('Homemaker Count')
-
+# removing individuals who declined to state their occupation
 nc.total_by_job <- nc.total_by_job[-2,]
 nc.total_by_job <- nc.total_by_job[-5,]
-ggplot(data = subset(head(nc.total_by_job, 5)), 
-       aes(x = contbr_occupation, 
-           y = cont_total)) +
-  geom_bar(stat = 'identity') + 
-  ggtitle('Top Occupations Total Contribution')
+
+# plot top jobs by count, total, and means
+count <- ggplot(subset(nc.total_by_job, 
+                       cont_count > 2000), 
+                aes(contbr_occupation, cont_count)) + 
+  geom_bar(stat = 'identity')
+
+total <- ggplot(subset(nc.total_by_job, 
+                       cont_total > 300000), 
+                aes(contbr_occupation, cont_total)) + 
+  geom_bar(stat = 'identity')
+
+mean <- ggplot(subset(nc.total_by_job, 
+                       cont_total > 300000), 
+                aes(contbr_occupation, mean)) + 
+  geom_bar(stat = 'identity')
+
+# compare top city by count and by total
+grid.arrange(count, total, mean, ncol = 1, nrow = 3)
+
 ```
 
-Subsetting the data to just self-employed individuals reveals a chart that is identically-shaped to the chart with complete data. However, subsetting the data to just retired individuals shows that a proportionally greater amount of retired contributors gave to Romney when compared to all occupations. Obama still dominated the contribution count even amongst retired people, but the proportion of contributions is less. Amongst homemakers, the divide between Democratic and Republican is much more evenly split (~2,400 donations for Democrats and just under 2,000 donations for Republicans). The Top Occupations Total Contribution chart shows how much more Retired contributors give (contribution receipt amount) than any other occupation.
+It is interesting to note that a significant chunk of contributors are retired. Ignoring the significant portion of contributors who declined to state their profession, the next top contributors are homemakers. As homemakers most likely 
+do not generate very much income, it is feasible to attribute this high contribution total to those who match their contribution with that of their 
+spouse (this is an available and widely used option in campaign donations). 
+After homemakers are contributors that come from highly esteemed careers such as physicians, attorneys, professors, executives, and presidents. Looking at means, Executives and Presidents have significantly higher mean contributions than other jobs.
 
-``` {r echo=FALSE, fig.height=10}
-tbl_zip <- subset(subset(nc, contb_receipt_amt > 0 & threedigit_zip >= 270 & threedigit_zip < 290 & (party == 'Democratic' | party == 'Republican')), select = c("threedigit_zip", "party"))
 
+``` {r fig.width=10}
+
+# create dataframe of individuals with zipcodes only in  NC and party affiliation
+tbl_zip <- subset(subset(nc, contb_receipt_amt > 0 &
+                           threedigit_zip >= 270 & 
+                           threedigit_zip < 290 & 
+                           (party == 'Democratic' | 
+                              party == 'Republican')), 
+                  select = c("threedigit_zip", "party"))
+
+# order dataframe by zipcode then by party affiliation
 tbl_zip <- tbl_zip[order(tbl_zip$threedigit_zip, tbl_zip$party),]
 
+# count how many individuals in each category of zipcode and party
 tbl_zip <- tbl_zip %>%
   count(threedigit_zip, party)
 
+# tidyr
+# shift party affiliation to be column names (wide format)
 tbl_zip <- spread(tbl_zip, party, n)
 
+# remove first column so as to not interfere with Chi-square test
 tbl_zip_test <- tbl_zip[, -1]
 
 chisq.test(tbl_zip_test)
-
-nc_true <- subset(nc, threedigit_zip >= 270 &                     threedigit_zip < 290)
-
-mosaic(nc_true$party ~ nc_true$threedigit_zip)
 ```
 
-Limited 3 digit zipcodes to between 270 and 289 since all North Carolina zipcodes are within that range.
+Limited 3 digit zipcodes to between 270 and 289 since all North Carolina 
+zipcodes are within that range.
 Using a Chi-squared test, we get a p-value of almost 0. Therefore we strongly reject the null hypothesis that party affiliation is independent of zipcode. 
 
-The mosaic of three digit zipcodes and party represents how for each zipcode, contributors consistently donated more often for Democratics than Republicans. The split was more even in zipcodes corresponding with Kingston (285), Greensboro (270), and Charlotte (281).
+```{r fig.width = 10}
+
+# subset nc to only include zipcodes in NC
+nc_true <- subset(nc, contb_receipt_amt > 0 & 
+                    (threedigit_zip >= 270 & threedigit_zip < 290))
+
+# plot of contribution count distribution by NC zipcode, fill by party affiliation
+count <- ggplot(data = subset(nc_true,
+                       (party == 'Democratic' | party == 'Republican')),
+       aes(threedigit_zip, fill = party)) + 
+  geom_bar()
+
+# plot of total contribution by NC zipcode, fill by party affiliation 
+total <- ggplot(data = subset(nc_true[order(nc_true$party),],
+                       (party == 'Democratic' | party == 'Republican')),
+       aes(threedigit_zip, contb_receipt_amt, fill = party)) + 
+  geom_bar(stat = 'identity')
+
+# compare the two plots
+grid.arrange(count, total, ncol = 1)
+
+```
+
+The three digit zipcodes 275 and 282, corresponding with Raleigh and Charlotte, respectively, exhibit both highest counts and totals. However, the 275 Raleigh area shows a greater Democratic influence while the 276 Raleigh and 282 Charlotte area has a higher proportion of Republicans than Democrats in the total. We can conclude that in these two areas, Republicans contribute a higher average amount than Democrats, causing this discrepancy.
+
 
 ``` {r echo=FALSE}
-tbl_city = subset(subset(nc, contb_receipt_amt > 0 & threedigit_zip >= 270 & threedigit_zip < 290 & (party == 'Democratic' | party == 'Republican')), select = c("contbr_city", "party"))
 
+# create dataframe of cities and party affiliations for each individual
+tbl_city = subset(subset(nc, contb_receipt_amt > 0 & 
+                           threedigit_zip >= 270 & 
+                           threedigit_zip < 290 & 
+                           (party == 'Democratic' | party == 'Republican')), 
+                  select = c("contbr_city", "party"))
+
+# count how many individuals donated to each party for each city
 tbl_city <- tbl_city %>%
   count(contbr_city, party)
 
+# shift party affiliation to column names (wide format)
 tbl_city <- spread(tbl_city, party, n)
 
+# convert NA values to 0
 tbl_city[is.na(tbl_city)] <- 0
 
+# remove first column to run Chi-square test
 tbl_city_test <- tbl_city[, -1]
 
 chisq.test(tbl_city_test)
 ```
 
-Similar procedure done on contributor city and party reveals the same. We reject the null hypothesis that a contributor's city is independent of party affiliation. 
+Similar procedure done on contributor city and party reveals the same. We reject the null hypothesis that a contributor's city is independent of party 
+affiliation. 
 
 # Bivariate Analysis
 
 ### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
 
-As most of the variables are nominal (most are simply labels for each contributor), it was infeasible to try and take the correlation of any two variables. However, despite the lack of correlation, there are several observations to be made.
+As most of the variables are nominal (most are simply labels for each 
+contributor), it was infeasible to try and take the correlation of any two variables. However, despite the lack of correlation, there are several 
+observations to be made.
 
-For the two main candidates: Barack Obama and Mitt Romney, the amount of contributions (contribution receipt amount) stayed mostly constant throughout the election process until the final month before Election Day. Campaigns probably utilize the most money during that time since it resembles a final push and there is no incentive to withhold spending after elections.
+For the two main candidates: Barack Obama and Mitt Romney, the amount of contributions (contribution receipt amount) stayed mostly constant throughout
+the election process until the final month before Election Day. Campaigns
+probably utilize the most money during that time since it resembles a final push and there is no incentive to withhold spending after elections.
 
-Obama contributors gave less than Romney contributors on average despite having a much higher contribution count. Rick Perry contributors gave an overwhelmingly higher average donation, but the total amount paled in comparison to the two main candidates as Perry did not win the nomination and subsequently dropped out of the race.
+Obama contributors gave less than Romney contributors on average despite having
+a much higher contribution count. Rick Perry contributors gave an overwhelmingly higher average donation, but the total amount paled in comparison to the two 
+main candidates as Perry did not win the nomination and subsequently dropped out
+of the race.
 
-The cities and zipcodes with the most amount of contributors were located in the top two metropolitan areas of North Carolina, Charlotte and the Triangle (Raleigh, Durham, Chapel Hill). The distribution of contributions in these cities was identical to the that of the total dataset, with Obama garnering the most contributions by far with Romney in second with significantly less.
+The cities and zipcodes with the most amount of contributors were located in the top two metropolitan areas of North Carolina, Charlotte and the Triangle 
+(Raleigh, Durham, Chapel Hill). The distribution of contributions in these 
+cities was identical to the that of the total dataset, with Obama garnering the most contributions by far with Romney in second with significantly less.
 
 ### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
 
-Looking at occupations and employers, the distribution of contributions is noticeably different with Retired Individuals and Homeowners. Homeowners are almost evenly split between donating to Obama and to Romney, while Retired individiuals have a slightly higher than usual proportion donated to Romney compared to the grand distribution. Retired contributors gave vastly more total money than any other profession.  
+Looking at occupations and employers, the distribution of contributions is noticeably different with Retired Individuals and Homeowners. Homeowners are
+almost evenly split between donating to Obama and to Romney, while Retired individiuals have a slightly higher than usual proportion donated to Romney compared to the grand distribution. Retired contributors gave vastly more total money than any other profession.  
 
 ### What was the strongest relationship you found?
-Since campaign receipt was the only numerical (discrete) variable, the only way to measure independence between numerical and categorical (nominal) variables was through a Chi-squared Test of Independence. Running one between party affiliation and zipcode showed that the two variables are definitely not independent of each other (p-value close to 0). A similar test between party affiliation and city produced similar results. However, the strength of these relationships are unknown.
+Since campaign receipt was the only numerical (discrete) variable, the only way 
+to measure independence between numerical and categorical (nominal) variables 
+was through a Chi-squared Test of Independence. Running one between party affiliation and zipcode showed that the two variables are definitely not independent of each other (p-value close to 0). A similar test between party affiliation and city produced similar results. However, the strength of these relationships are unknown.
 
 Using ANOVA to evaluate grouped means between contribution receipt and nominal variables (party, zipcode, city) would be infeasible in this case since receipts are discrete, not a continuous variable.
 
 # Multivariate Plots Section
 
 ```{r echo=FALSE, Multivariate_Plots}
+
+# time series plot of total contribution receipt amounts for Obama and Romney
 ggplot(data = subset(nc, contb_receipt_amt > 0 &
                        (cand_nm == 'Obama, Barack' |
                           cand_nm == 'Romney, Mitt')), 
@@ -566,29 +884,45 @@ ggplot(data = subset(nc, contb_receipt_amt > 0 &
   stat_summary(fun.y = sum, geom = 'line') 
 ```
 
-We can see huge spikes of daily contributions in April and the few months leading up to Election Day, especially for Mitt Romney. Maybe looking at cumulative sums would be more interesting than daily sums.
+We can see huge spikes of daily contributions in April and the few months 
+leading up to Election Day, especially for Mitt Romney. Maybe looking at 
+cumulative sums would be more interesting than daily sums.
 
 ``` {r echo=FALSE}
-obama_by_date <- group_by(subset(nc,                                    contb_receipt_amt > 0 &                                  cand_nm == 'Obama, Barack'),                   contb_receipt_dt)
 
+# create new dataframe of nc of only Obama contributors, grouping by receipt date
+obama_by_date <-
+  group_by(subset(nc, contb_receipt_amt > 0 & 
+                    cand_nm == 'Obama, Barack'),
+           contb_receipt_dt)
+
+# order dataframe by date
 obama_by_date <- obama_by_date[order(obama_by_date$contb_receipt_dt),]
 
-obama_by_date <- obama_by_date[,                              c("contb_receipt_dt", "contb_receipt_amt")]
+# extract only date and contribution receipt amount columns
+obama_by_date <- obama_by_date[, c("contb_receipt_dt", "contb_receipt_amt")]
 
-obama_by_date_sum <- aggregate(.~contb_receipt_dt,                              data = obama_by_date,                               sum)
+# new dataframe of date and total contribution receipt amount
+obama_by_date_sum <- aggregate(.~contb_receipt_dt, data = obama_by_date, sum)
 
+# new column of cumulative receipt amount over time
 obama_by_date_sum$contb_receipt_cumsum <- cumsum(obama_by_date_sum$contb_receipt_amt)
 
-romney_by_date <- group_by(subset(nc,                                  contb_receipt_amt > 0 &                                 cand_nm == 'Romney, Mitt'),                              contb_receipt_dt)
+# similarly done with Romney
+romney_by_date <- group_by(subset(nc, contb_receipt_amt > 0 & 
+                                    cand_nm == 'Romney, Mitt'), 
+                           contb_receipt_dt)
 
 romney_by_date <- romney_by_date[order(romney_by_date$contb_receipt_dt),]
 
-romney_by_date <- romney_by_date[,                             c("contb_receipt_dt", "contb_receipt_amt")]
+romney_by_date <- romney_by_date[, c("contb_receipt_dt", "contb_receipt_amt")]
 
-romney_by_date_sum <- aggregate(.~contb_receipt_dt,                                data = romney_by_date,                               sum)
+romney_by_date_sum <- aggregate(.~contb_receipt_dt, 
+                                data = romney_by_date, sum)
 
 romney_by_date_sum$contb_receipt_cumsum <- cumsum(romney_by_date_sum$contb_receipt_amt)
 
+# time series plot of cumulative receipt totals for Obama and Romney
 ggplot() + 
   geom_line(data = romney_by_date_sum, 
             aes(x = contb_receipt_dt,
@@ -608,19 +942,28 @@ ggplot() +
            label = 'Romney, Mitt')
 ```
 
-Looking at cumulative sums, we can see that Obama begins the campaign with a higher sum, but is overtaken by Romney around April 2012. Romney came to Charlotte, North Carolina on April 18, 2012 to give a speech, so this could be the cause of the giant spike of contributions in that month.
+Looking at cumulative sums, we can see that Obama begins the campaign with a 
+higher sum, but is overtaken by Romney around April 2012. Romney came to 
+Charlotte, North Carolina on April 18, 2012 to give a speech, so this could be 
+the cause of the giant spike of contributions in that month.
 
 ``` {r echo=FALSE, fig.width = 10}
+
+# group nc by three digit zipcode
 total_by_zip <- group_by(subset(nc_true,
                                 contb_receipt_amt > 0),
                          threedigit_zip)
+
+# order by three digit zipcode
 total_by_zip <- total_by_zip[order(total_by_zip$threedigit_zip),]
 
+# create new dataframe of candidate name, and total contribution receipt amount for each NC zipcode
 total_by_zip <- aggregate(cbind(contb_receipt_amt)~threedigit_zip+cand_nm, 
                           data = total_by_zip, 
                           sum, 
                           na.rm = TRUE)
 
+# plot total contributor amounts for each zipcode for Obama and Romney
 ggplot(data = subset(total_by_zip, 
                      cand_nm == 'Obama, Barack' |
                        cand_nm == 'Romney, Mitt'), 
@@ -629,6 +972,7 @@ ggplot(data = subset(total_by_zip,
   geom_bar(stat = 'identity') + 
   facet_wrap( ~ cand_nm)
 
+# plot total contributor amounts for each zipcode for other Primary/Third Party candidates
 ggplot(data = subset(total_by_zip, 
                      (cand_nm == 'Bachmann, Michele' |
                         cand_nm == 'Cain, Herman' |
@@ -642,34 +986,36 @@ ggplot(data = subset(total_by_zip,
   facet_wrap( ~ cand_nm, ncol = 2)
 ```
 
-Between Obama and Romney, we can see that the Obama receieved the most donations from the Raleigh area (three-digit code 275 and 276) while Romney received his most donations from Charlotte (280-282). Obama receieved the second most donations from Durham while Romney received one of the smallest amounts by zipcode from Durham (Durham is a much more liberal county than the rest of the state). 
+Between Obama and Romney, we can see that the Obama receieved the most donations from the Raleigh area (three-digit code 275 and 276) while Romney received his 
+most donations from Charlotte (280-282). Obama receieved the second most 
+donations from Durham while Romney received one of the smallest amounts by 
+zipcode from Durham (Durham is a much more liberal county than the rest of the state). 
 
-On a smaller scale between the other relevant Republican nominees and libertarian candidate Gary Earl Johnson, Ron Paul led this smaller group with major donations from Raleigh, Charlotte, and Asheville. Rick Perry relied on donations solely from Charlotte. The amount of financial support for third party candidates such as Gary Johnson is similar to that of low-popularity Republican nominees who dropped out of the race early. 
+On a smaller scale between the other relevant Republican nominees and 
+libertarian candidate Gary Earl Johnson, Ron Paul led this smaller group with 
+major donations from Raleigh, Charlotte, and Asheville. Rick Perry relied on donations solely from Charlotte. The amount of financial support for third party candidates such as Gary Johnson is similar to that of low-popularity Republican nominees who dropped out of the race early. 
 
-``` {r echo=FALSE}
-nc_true <- subset(nc_true, contb_receipt_amt > 0)
-
-ggplot(data = nc_true[order(nc_true$party),], 
-       aes(x = threedigit_zip, 
-           y = contb_receipt_amt, 
-           color = party)) + 
-  geom_bar(stat = 'identity')
-```
-
-This bar chart reflects how Obama received more from the Raleigh area and Romney received more from the Charlotte Area. However, the discrepancy between the two candidates in Charlotte is huge: the contributions towards Romney versus Obama is almost a 3:1 ratio. The Durham area also exhibits a large ratio skewed towards Obama with what almost looks like a 5:1 ratio. 
 
 # Multivariate Analysis
 
 ### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
-Obama received a higher amount of total contribution amount towards the beginning of the campaign, but the efforts of Romney in the final year, including giving a speech in Charlotte, strengthened his run in the final stretch and caused him to pull ahead in terms of financial support. We could already say for certainty through previous chi-square tests that party is not independent of zipcode and city, and these plots furthered strengthened that claim. 
+Obama received a higher amount of total contribution amount towards the
+beginning of the campaign, but the efforts of Romney in the final year, 
+including giving a speech in Charlotte, strengthened his run in the final 
+stretch and caused him to pull ahead in terms of financial support. We could already say for certainty through previous chi-square tests that party is not independent of zipcode and city, and these plots furthered strengthened that 
+claim. 
 
 ### Were there any interesting or surprising interactions between features?
 
-It was surprising to see how much discrepancy there was between the two main candidates in larger cities. North Carolina has been a swing state in recent years, voting Democratic in 2008 but Republican in 2012. The level of contribution to the two parties in 2012 shows public sentiment shifting towards Romney, whether it be through his extra efforts in the state or Obama's current term in the office preventing his campaign from reaching the same level of notoriety as in 2008. In 2012, contributors from large cities showed more favor towards Romney as compared to before, even if Raleigh as a whole donated more towards Obama. In smaller zipcodes (with the exception of Durham), the amount of support for Romney overwhelmed that of Obama, probably because small towns in North Carolina largely vote conservative.
+It was surprising to see how much discrepancy there was between the two main candidates in larger cities. North Carolina has been a swing state in recent 
+years, voting Democratic in 2008 but Republican in 2012. The level of 
+contribution to the two parties in 2012 shows public sentiment shifting towards Romney, whether it be through his extra efforts in the state or Obama's current term in the office preventing his campaign from reaching the same level of notoriety as in 2008. In 2012, contributors from large cities showed more favor towards Romney as compared to before, even if Raleigh as a whole donated more towards Obama. In smaller zipcodes (with the exception of Durham), the amount of support for Romney overwhelmed that of Obama, probably because small towns in 
+North Carolina largely vote conservative.
 
 ### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
 
-As stated before, the only possible model would be a time-series model between receipt date and receipt amount. However, the date times are unevenly split, which makes modeling this data very difficult without an advanced algorithm.
+The only possible models would be time series models between receipt date and contribution receipt counts/totals. However, the date times are unevenly split, 
+which makes modeling this data very difficult without an advanced algorithm.
 
 
 ------
@@ -678,24 +1024,58 @@ As stated before, the only possible model would be a time-series model between r
 # Final Plots and Summary
 
 ### Plot One
-```{r echo=FALSE, Plot_One}
-ggplot(data = subset(nc, contb_receipt_amt > 0),
-       aes(contb_receipt_amt)) + 
-  geom_histogram(binwidth = 20, 
-                 fill = "darkgreen") +
-  coord_cartesian(xlim = c(0, 500)) +
-  ggtitle('Contribution Receipt Amount') +
-  xlab('Contribution Receipt Amount (dollars)') +
-  ylab('Number of Receipts')
+```{r fig.width = 10, Plot_One}
 
+# from bivariate analysis
+count <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_count)) + 
+  geom_line() +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06')) +
+  xlab('Date') + ylab('Count') +
+  ggtitle('Count from July 2011 to Election Day')
+
+total <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_total)) + 
+  geom_line() +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06')) +
+  xlab('Date') + ylab('Total (dollars)') +
+  ggtitle('Total from July 2011 to Election Day')
+
+count_expo <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_count)) + 
+  geom_point() + 
+  scale_y_log10() + 
+  stat_smooth(method = 'lm',
+              aes(color = 'Exponential')) +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06')) +
+  xlab('Date') + ylab('Count') +
+  ggtitle('Count from July 2011 to Election Day')
+
+total_expo <- ggplot(data = nc.total_by_date, 
+               aes(contb_receipt_dt, cont_total)) + 
+  geom_point() + 
+  scale_y_log10() + 
+  stat_smooth(method = 'lm',
+              aes(color = 'Exponential')) +
+  scale_x_date(limits = c(as.Date('2011-07-25'),
+                          '2012-11-06')) + 
+  xlab('Date') + ylab('Total (dollars)') +
+  ggtitle('Total from July 2011 to Election Day')
+
+grid.arrange(count, total, count_expo, total_expo, ncol = 2, nrow = 2)
 ```
 
 ### Description One
 
-Contributions are somewhat bimodal around $50 and $100. Above $50, there are huge dropoffs between $50 increments, which shows how people generally donate values that are regular numbers ($50, $100, $150, $200, $250). 
+Examining both contribution count and contribution totals from July 2011 to Election Day (November 6, 2012), suggested that the relationships were exponential. Therefore, both y-axes were subjected to a log10 transformation, and a linear model was fitted to both plots. Since a linear model seems to fit well to both plots after this transformation, we can say that an exponential model is a good fit for this data. The counts and totals exhibit this behavior as the days approach Election Day, since campaigns utilize the most money in the final stretch; there is no incentive to save money for after the election.
 
 ### Plot Two
 ```{r echo=FALSE, Plot_Two}
+
+# from multivariate analysis
 ggplot() + 
   geom_line(data = romney_by_date_sum, 
             aes(x = contb_receipt_dt, 
@@ -720,26 +1100,60 @@ ggplot() +
 
 ### Description Two
 
-From 2011 to 2013, where the bulk of contribution donations occurred, Obama held a slight lead in the earlier months until around April 2014, when Romney campaigned within North Carolina, giving a speech in Charlotte and driving a large boost of contributions. By Election Day, Romney and the Republicans had amassed a much larger cumulative total over the Democrats, and the Republicans won the popular vote in North Carolina.
+From 2011 to 2013, where the bulk of contribution donations occurred, Obama held 
+a slight lead in the earlier months until around April 2014, when Romney 
+campaigned within North Carolina, giving a speech in Charlotte and driving a 
+large boost of contributions. By Election Day, Romney and the Republicans had amassed a much larger cumulative total over the Democrats, and the Republicans 
+won the popular vote in North Carolina.
 
 ### Plot Three
-```{r echo=FALSE, Plot_Three}
-ggplot(data = nc_true[order(nc_true$party),],
-       aes(x = threedigit_zip,
-           y = contb_receipt_amt, 
-           color = party)) + 
+```{r echo=FALSE, fig.width = 10, Plot_Three}
+
+# from bivariate analysis
+
+# subset data to include only NC zipcodes
+nc_true <- subset(nc, contb_receipt_amt > 0 & 
+                    (threedigit_zip >= 270 & threedigit_zip < 290))
+
+# plot of contribution count distribution by NC zipcode, fill by party affiliation
+count <- ggplot(data = subset(nc_true,
+                       (party == 'Democratic' | party == 'Republican')),
+       aes(threedigit_zip, fill = party)) + 
+  geom_bar() + 
+  xlab('Three Digit NC Zipcode') + ylab('Count') + 
+  ggtitle('Count by NC Zipcode')
+
+# plot of total contribution by NC zipcode, fill by party affiliation 
+total <- ggplot(data = subset(nc_true[order(nc_true$party),],
+                       (party == 'Democratic' | party == 'Republican')),
+       aes(threedigit_zip, contb_receipt_amt, fill = party)) + 
   geom_bar(stat = 'identity') + 
-  ggtitle('Contribution Receipt Totals by Zipcode') +
-  xlab('Three Digit Zipcodes') +
-  ylab('Contribution Receipt Total (dollars)')
+  xlab('Three Digit NC Zipcode') + ylab('Total (dollars)') + 
+  ggtitle('Count by NC Zipcode')
+
+# compare the two plots
+grid.arrange(count, total, ncol = 1)
 ```
 
 ### Description Three
 
-This bar chart reflects how Democrats (Obama) received more from the Raleigh area and the Republicans (mostly Romney) received more from the Charlotte Area. However, the discrepancy between the two candidates in Charlotte is huge: the contributions towards Republicans versus Obama is almost a 3:1 ratio. The Durham area also exhibits a large ratio skewed towards the other direction with what almost looks like a 5:1 Obama to Republican ratio. 
+These bar charts show the distribution of contribution counts and totals for each party in a given three digit NC zipcode. The three digit zipcodes 275 and 282, corresponding with Raleigh and Charlotte, respectively, exhibit both highest counts and totals. However, the 275 Raleigh area shows a greater Democratic influence while the 276 Raleigh and 282 Charlotte area has a higher proportion of Republicans than Democrats in the total. We can conclude that in these two areas, Republicans contribute a higher average amount than Democrats, causing this discrepancy.
 
 ------
 
 # Reflection
 
-The nc data set contained contribution information on almost 160,000 individuals from the 2012 Presidential Election. Although the variables were mostly categorical (nominal) with the exception of contribution receipt amount and date, there was still much examination to be done regarding donation splits among candidates and parties. Eventually, I explored the amount of financial contribution across several variables and was able to visualize the distribution of contribution receipts over several variables such as party, zipcode, city, and occupation. Unfortunately, this data could not be modeled due to the uneven dates; linear interpolation to fill in between dates would not be a feasible solution. However, through manipulating the data and grouping the data by different variables, I was able to discover just how much more funding and support Mitt Romney and the Republicans had than Obama and the Democrats. In addition, I examined the split of donations across zipcodes and cities of North Carolina and its inhabitants' occupations to gain a better picture of how the state contributed to each party as a whole and in parts. In the future, for better and more in-depth analyses, it would be interesting to explore additional occupational metrics such as annual salary to see if there existed a relationship between annual salary and contribution amount. Another idea would be to examine each county's voting distribution to see if voting habits and contributions are similar in a given county. Finally, additional information about contributors themselves such as their age, gender, and population of their listed zipcode or city could illuminate trends in these variables and contribution amounts to better predict which sorts of individuals contribute how much and to which party or candidate.
+The nc data set contained contribution information on almost 160,000 individuals from the 2012 Presidential Election. Although the variables were mostly 
+categorical (nominal) with the exception of contribution receipt amount and 
+date, there was still much examination to be done regarding donation splits 
+among candidates and parties. Eventually, I explored the amount of financial contribution across several variables and was able to visualize the distribution
+of contribution receipts over several variables such as party, zipcode, city,
+and occupation. Unfortunately, this data could not be modeled due to the uneven dates; linear interpolation to fill in between dates would not be a feasible solution. However, through manipulating the data and grouping the data by 
+different variables, I was able to discover just how much more funding and 
+support Mitt Romney and the Republicans had than Obama and the Democrats. In addition, I examined the split of donations across zipcodes and cities of North Carolina and its inhabitants' occupations to gain a better picture of how the 
+state contributed to each party as a whole and in parts. In the future, for 
+better and more in-depth analyses, it would be interesting to explore additional occupational metrics such as annual salary to see if there existed a 
+relationship between annual salary and contribution amount. Another idea would 
+be to examine each county's voting distribution to see if voting habits and contributions are similar in a given county. Finally, additional information 
+about contributors themselves such as their age, gender, and population of their listed zipcode or city could illuminate trends in these variables and 
+contribution amounts to better predict which sorts of individuals contribute how much and to which party or candidate.
